@@ -1,4 +1,16 @@
 chrome.runtime.sendMessage({ type: "getJwt" }, (response) => {
+
+  const observer = new MutationObserver((mutationsList) => {
+    for (const mutation of mutationsList) {
+        if (mutation.type === 'childList') {
+            onPageLoad();
+        }
+    }
+  });
+  
+  observer.observe(document.body, { childList: true, subtree: true });
+
+
   const onPageLoad = () => {
     console.log("Page is loaded");
     const style = document.createElement("style");
@@ -66,19 +78,10 @@ chrome.runtime.sendMessage({ type: "getJwt" }, (response) => {
     }
   };
 
-  // Check for URL changes using setInterval
-  const checkForUrlChange = () => {
-    if (window.location.href !== lastUrl) {
-      lastUrl = window.location.href;
-      onPageLoad();
-    }
-  };
 
   // Run onPageLoad for the first time
   onPageLoad();
 
-  let lastUrl = window.location.href;
-  setInterval(checkForUrlChange, 500);
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
