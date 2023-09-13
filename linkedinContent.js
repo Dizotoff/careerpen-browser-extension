@@ -1,15 +1,23 @@
 chrome.runtime.sendMessage({ type: "getJwt" }, (response) => {
+  console.log("Received JWT response");
 
-  const observer = new MutationObserver((mutationsList) => {
-    for (const mutation of mutationsList) {
-        if (mutation.type === 'childList') {
-            onPageLoad();
-        }
+  let observer;
+  let buttonInjected = false;
+
+  const startObserver = () => {
+    if (observer) {
+      observer.disconnect();
     }
-  });
-  
-  observer.observe(document.body, { childList: true, subtree: true });
 
+    observer = new MutationObserver((mutationsList) => {
+      const targetNode = document.querySelector(".jobs-unified-top-card");
+      if (targetNode && !buttonInjected) {
+        onPageLoad();
+      }
+    });
+  
+    observer.observe(document.body, { childList: true, subtree: true });
+  };
 
   const onPageLoad = () => {
     console.log("Page is loaded");
@@ -75,13 +83,25 @@ chrome.runtime.sendMessage({ type: "getJwt" }, (response) => {
         writeCoverLetterButton,
         jobsSaveButton.nextSibling
       );
+      buttonInjected = true;
+      observer.disconnect();
+
+      const buttonObserver = new MutationObserver(() => {
+        if (!document.contains(jobsSaveButton)) {
+          buttonInjected = false;
+          startObserver();
+          buttonObserver.disconnect();
+        }
+      });
+
+      buttonObserver.observe(document.body, { childList: true, subtree: true });
+    } else {
+      console.log("Save button not found");
+
     }
   };
 
-
-  // Run onPageLoad for the first time
-  onPageLoad();
-
+  startObserver();
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -91,7 +111,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     displayCoverLetterData(data);
   } else if (request.type === "onCoverLetterError") {
     displayErrorMessageModal(
-      "Sorry, something went wrong. Please try again later",
+      "Sorry, something went wrong.",
       undefined
     );
   } else if (request.type === "onProfileNotFound") {
